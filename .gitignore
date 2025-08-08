@@ -1,0 +1,4 @@
+.ipynb_checkpoints/*
+__pycache__/*
+PAMAP2_Dataset*
+.idea

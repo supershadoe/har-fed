@@ -1,0 +1,7 @@
+numpy
+pandas
+pandas-stubs
+scikit-learn
+jupyter
+tensorboard
+tqdm
