@@ -42,6 +42,7 @@ def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
         subject_df = subject_df[subject_df['activity_id'] != 0].reset_index(drop=True)
         subject_df['heart_rate'] = subject_df['heart_rate'].ffill()
         subject_df.dropna(inplace=True)
+        subject_df['subject_id'] = i
 
         output_filename = output_path / f"subject{i}.csv"
         subject_df.to_csv(output_filename, index=False)
