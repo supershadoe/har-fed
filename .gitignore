@@ -3,3 +3,4 @@ __pycache__/*
 PAMAP2_Dataset*
 .idea
 venv
+dataset_proc
