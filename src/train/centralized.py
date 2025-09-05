@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-PROCESSED_DATA_DIR = "dataset"
+PROCESSED_DATA_DIR = "../dataset"
 SUBJECTS_TO_USE = list(range(101, 109))
 RARE_ACTIVITIES = [9, 11, 20] # watching TV, car driving, playing soccer
 
