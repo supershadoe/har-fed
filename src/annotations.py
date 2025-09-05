@@ -1,26 +1,28 @@
-class Annotations:
-    __slots__ = ['attrs', 'attrs_to_drop']
-    CLASS_NAMES = {
-        0: 'other',
-        1: 'lying',
-        2: 'sitting',
-        3: 'standing',
-        4: 'walking',
-        5: 'running',
-        6: 'cycling',
-        7: 'Nordic',
-        9: 'watching',
-        10: 'computer',
-        11: 'car',
-        12: 'ascending',
-        13: 'descending',
-        16: 'vacuum',
-        17: 'ironing',
-        18: 'folding',
-        19: 'house',
-        20: 'playing',
-        24: 'rope',
-    }
+from enum import Enum
+
+class TargetClass(Enum):
+    OTHER = 0
+    LYING = 1
+    SITTING = 2
+    STANDING = 3
+    WALKING = 4
+    RUNNING = 5
+    CYCLING = 6
+    NORDIC = 7
+    WATCHING_TV = 9
+    COMPUTER = 10
+    DRIVING_CAR = 11
+    ASCENDING = 12
+    DESCENDING = 13
+    VACUUM = 16
+    IRONING = 17
+    FOLDING = 18
+    CLEANING = 19
+    SOCCER = 20
+    ROPE = 24
+
+class Attributes:
+    __slots__ = ['to_keep', 'to_drop']
 
     def __init__(self, *, is_preprocessing: bool) -> None:
         orient_labels = ('orient_x', 'orient_y', 'orient_z', 'orient_w')
@@ -33,7 +35,7 @@ class Annotations:
         ]
         if is_preprocessing:
             sensor_labels.extend(orient_labels)
-        self.attrs = [
+        self.to_keep = [
             'timestamp', 'activity_id', 'heart_rate',
             *(
                 f'{i}_{j}'
@@ -42,7 +44,7 @@ class Annotations:
             ),
         ]
         # Drop orientation labels as they are useless
-        self.attrs_to_drop = [
+        self.to_drop = [
             f'{i}_{j}'
             for i in ['hand', 'chest', 'ankle']
             for j in orient_labels

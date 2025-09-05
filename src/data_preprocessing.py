@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 from tqdm import tqdm
 
-from annotations import Annotations
+from annotations import Attributes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,25 +20,25 @@ def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
     Loads raw PAMAP2 data for each subject, cleans it, and saves each
     subject's data to a separate CSV file.
     """
-    annotations = Annotations(is_preprocessing=True)
+    attributes = Attributes(is_preprocessing=True)
 
     for i in tqdm(range(101, 110), desc="Processing Subjects"):
         file_path = dataset_path / "Protocol" / f"subject{i}.dat"
         optional_file_path = dataset_path / "Optional" / f"subject{i}.dat"
 
         dfs: List[pd.DataFrame] = [
-            pd.read_csv(file_path, sep=" ", header=None, names=annotations.attrs)
+            pd.read_csv(file_path, sep=" ", header=None, names=attributes.to_keep)
         ]
         if optional_file_path.exists():
             dfs.append(pd.read_csv(
                 optional_file_path,
                 sep=" ",
                 header=None,
-                names=annotations.attrs,
+                names=attributes.to_keep,
             ))
 
         subject_df = pd.concat(dfs, ignore_index=True)
-        subject_df.drop(annotations.attrs_to_drop, axis=1, inplace=True)
+        subject_df.drop(attributes.to_drop, axis=1, inplace=True)
         subject_df = subject_df[subject_df['activity_id'] != 0].reset_index(drop=True)
         subject_df['heart_rate'] = subject_df['heart_rate'].ffill()
         subject_df.dropna(inplace=True)
