@@ -51,7 +51,7 @@ def main():
         df = df[df['activity_id'].isin(ACTIVITIES_TO_USE)]
 
         train_subject_df, test_subject_df = train_test_split(
-            df, test_size=0.20, random_state=42
+            df, test_size=0.20, shuffle=False
         )
         all_train_dfs.append(train_subject_df)
         all_test_dfs.append(test_subject_df)
