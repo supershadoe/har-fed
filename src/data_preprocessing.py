@@ -5,7 +5,7 @@ import sys
 from typing import List
 
 import pandas as pd
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from annotations import Attributes
 
@@ -22,7 +22,7 @@ def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
     """
     attributes = Attributes(is_preprocessing=True)
 
-    for i in tqdm(range(101, 110), desc="Processing Subjects"):
+    for i in tqdm(range(101, 110), desc="Processing Subjects", colour="cyan"):
         file_path = dataset_path / "Protocol" / f"subject{i}.dat"
         optional_file_path = dataset_path / "Optional" / f"subject{i}.dat"
 
@@ -39,15 +39,17 @@ def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
 
         subject_df = pd.concat(dfs, ignore_index=True)
         subject_df.drop(attributes.to_drop, axis=1, inplace=True)
+        subject_df = subject_df.ffill()
         subject_df = subject_df[subject_df['activity_id'] != 0].reset_index(drop=True)
-        subject_df['heart_rate'] = subject_df['heart_rate'].ffill()
-        subject_df.dropna(inplace=True)
         subject_df['subject_id'] = i
+        subject_df.dropna(inplace=True)
 
         output_filename = output_path / f"subject{i}.csv"
         subject_df.to_csv(output_filename, index=False)
 
-    logger.info("Preprocessing complete. Individual files saved.")
+    logger.info(
+        f"Preprocessing complete; Saved processed files at {output_path}.",
+    )
 
 
 if __name__ == '__main__':
