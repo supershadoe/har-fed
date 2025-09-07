@@ -4,18 +4,18 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from scipy import stats
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from models.cnn import CNNModel
+from annotations import TargetClass
 from train.dataset import Pamap2Dataset
 
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='[%(levelname)s] %(asctime)s: %(message)s',
 )
 logger = logging.getLogger(__name__)
@@ -33,29 +33,6 @@ EPOCHS = 15
 LEARNING_RATE = 0.001
 
 
-def create_windows(
-    df: pd.DataFrame,
-    feature_cols: list[str],
-    window_size: int,
-    step: int
-):
-    """Creates sliding windows of sensor data from a DataFrame."""
-    windows = []
-    labels = []
-
-    for _, group in df.groupby('subject_id'):
-        for i in range(0, len(group) - window_size, step):
-            feature_window = group[feature_cols].iloc[i:i + window_size].values
-            
-            # Use the mode of the activity_id in the window as the label
-            label = stats.mode(group['activity_id'].iloc[i:i + window_size])[0][0]
-            
-            windows.append(feature_window)
-            labels.append(label)
-            
-    return np.array(windows, dtype=np.float32), np.array(labels, dtype=np.int64)
-
-
 def main():
     """Main function to run the LOSO cross-validation."""
     logger.info(f"Using device: {DEVICE}")
@@ -63,46 +40,51 @@ def main():
     temp_df = pd.read_csv(f"{PROCESSED_DATA_DIR}/subject101.csv")
     feature_cols = [col for col in temp_df.columns if col not in ['timestamp', 'activity_id']]
 
-    all_possible_activities = [1, 2, 3, 4, 5, 6, 7, 12, 13, 16, 17, 18, 19, 24]
-    label_map = {label: i for i, label in enumerate(all_possible_activities)}
-    n_classes = len(all_possible_activities)
+    label_map = {}
+    i = 0
+    for act in TargetClass:
+        if act.value in RARE_ACTIVITIES:
+            continue
+        label_map[act.value] = i
+        i += 1
+    n_classes = len(label_map)
 
     final_scores = []
 
     logger.info("Starting...")
 
     for test_subject_id in tqdm(SUBJECTS_TO_USE, desc="LOSO Folds"):
-
+        logging.debug(f"[subject{test_subject_id}] Concating train set")
         train_subject_ids = [sid for sid in SUBJECTS_TO_USE if sid != test_subject_id]
         train_dfs = [pd.read_csv(f"{PROCESSED_DATA_DIR}/subject{sid}.csv") for sid in train_subject_ids]
         train_df = pd.concat(train_dfs, ignore_index=True)
-        train_df['subject_id'] = train_df['subject_id'].astype(int)
 
+        logging.debug(f"[subject{test_subject_id}] Creating test set")
         test_df = pd.read_csv(f"{PROCESSED_DATA_DIR}/subject{test_subject_id}.csv")
-        test_df['subject_id'] = test_df['subject_id'].astype(int)
 
-
+        logging.debug(f"[subject{test_subject_id}] Drop rare acts")
         train_df = train_df[~train_df['activity_id'].isin(RARE_ACTIVITIES)]
         test_df = test_df[~test_df['activity_id'].isin(RARE_ACTIVITIES)]
 
-        X_train, y_train_raw = create_windows(train_df, feature_cols, WINDOW_SIZE, STEP)
-        X_test, y_test_raw = create_windows(test_df, feature_cols, WINDOW_SIZE, STEP)
-
+        logging.debug(f"[subject{test_subject_id}] fit and transform")
         scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train.reshape(-1, X_train.shape[-1])).reshape(X_train.shape)
-        X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+        train_df[feature_cols] = scaler.fit_transform(train_df[feature_cols])
+        test_df[feature_cols] = scaler.transform(test_df[feature_cols])
 
-        y_train = np.array([label_map[label] for label in y_train_raw])
-        y_test = np.array([label_map[label] for label in y_test_raw])
+        logging.debug(f"[subject{test_subject_id}] Create datasets and data loaders")
+        train_dataset = Pamap2Dataset(train_df, feature_cols, label_map, WINDOW_SIZE, STEP)
+        test_dataset = Pamap2Dataset(test_df, feature_cols, label_map, WINDOW_SIZE, STEP)
 
-        train_loader = DataLoader(Pamap2Dataset(X_train, y_train), batch_size=BATCH_SIZE, shuffle=True)
-        test_loader = DataLoader(Pamap2Dataset(X_test, y_test), batch_size=BATCH_SIZE, shuffle=False)
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
+        logging.debug(f"[subject{test_subject_id}] Initialize CNN")
         model = CNNModel(n_features=len(feature_cols), n_classes=n_classes).to(DEVICE)
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
         criterion = nn.CrossEntropyLoss()
 
         for epoch in range(EPOCHS):
+            logging.debug(f"[subject{test_subject_id}] Start training epoch {epoch}")
             model.train()
             for X_batch, y_batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS} Training", leave=False):
                 X_batch, y_batch = X_batch.to(DEVICE), y_batch.to(DEVICE)
