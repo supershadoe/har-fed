@@ -1,42 +1,40 @@
-import pandas as pd
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-class Pamap2Dataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
+class Pamap2Dataset(Dataset):
     def __init__(
         self,
-        df: pd.DataFrame,
-        feature_cols: list[str],
+        X_data: np.ndarray,
+        y_data: np.ndarray,
+        block_ids: np.ndarray,
         label_map: dict,
         window_size: int,
         step: int,
     ):
-        self.feature_cols = feature_cols
+        self.X_data = X_data
+        self.y_data = y_data
         self.label_map = label_map
         self.window_size = window_size
-
-        # Identify contiguous blocks of the same activity for each subject
-        # A new block starts when the activity_id or subject_id changes
-        df['block_id'] = (
-            (df['subject_id'] != df['subject_id'].shift()) |
-            (df['activity_id'] != df['activity_id'].shift())
-        ).cumsum()
-
+        
         # Pre-calculate the start indices of all possible PURE windows
         self.windows = []
-        for _, block in df.groupby('block_id'):
-            if len(block) >= self.window_size:
-                # Get the raw numeric indices for the block
-                start_index = block.index[0]
-                num_samples_in_block = len(block)
-                
+
+        # Get the starting index of each unique, contiguous block
+        _, block_start_indices = np.unique(block_ids, return_index=True)
+
+        # The end of one block is the start of the next one.
+        # Create a list of end indices by shifting the start indices and appending the total length.
+        block_end_indices = np.append(block_start_indices[1:], len(block_ids))
+
+        # Iterate over each block using its start and end index
+        for start_idx, end_idx in zip(block_start_indices, block_end_indices):
+            num_samples_in_block = end_idx - start_idx
+
+            # Only create windows if the block is long enough
+            if num_samples_in_block >= self.window_size:
                 for i in range(0, num_samples_in_block - self.window_size + 1, step):
-                    # Store the absolute start index of the window
-                    self.windows.append(start_index + i)
-        
-        self.df = df
-        # We can now be certain the label is the same across the whole window
-        self.raw_labels = df['activity_id'].values
+                    self.windows.append(start_idx + i)
 
     def __len__(self):
         return len(self.windows)
@@ -45,9 +43,9 @@ class Pamap2Dataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         start_idx = self.windows[idx]
         end_idx = start_idx + self.window_size
 
-        features = self.df[self.feature_cols].iloc[start_idx:end_idx].values
+        features = self.X_data[start_idx:end_idx]
 
-        raw_label = self.raw_labels[start_idx]
+        raw_label = self.y_data[start_idx]
         label = self.label_map[raw_label]
 
         return torch.tensor(features, dtype=torch.float32), torch.tensor(label, dtype=torch.long)

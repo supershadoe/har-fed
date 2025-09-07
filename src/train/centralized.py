@@ -31,6 +31,7 @@ STEP = 128
 BATCH_SIZE = 512
 EPOCHS = 15
 LEARNING_RATE = 0.001
+DATALOADER_WORKERS = 64
 
 
 def main():
@@ -66,17 +67,29 @@ def main():
         train_df = train_df[~train_df['activity_id'].isin(RARE_ACTIVITIES)]
         test_df = test_df[~test_df['activity_id'].isin(RARE_ACTIVITIES)]
 
-        logging.debug(f"[subject{test_subject_id}] fit and transform")
+        logging.debug(f"[subject{test_subject_id}] identify activity blocks")
+        train_df['block_id'] = ((train_df['subject_id'] != train_df['subject_id'].shift()) | (train_df['activity_id'] != train_df['activity_id'].shift())).cumsum()
+        test_df['block_id'] = ((test_df['subject_id'] != test_df['subject_id'].shift()) | (test_df['activity_id'] != test_df['activity_id'].shift())).cumsum()
+
+        logging.debug(f"[subject{test_subject_id}] normalize data")
         scaler = StandardScaler()
         train_df[feature_cols] = scaler.fit_transform(train_df[feature_cols])
         test_df[feature_cols] = scaler.transform(test_df[feature_cols])
 
-        logging.debug(f"[subject{test_subject_id}] Create datasets and data loaders")
-        train_dataset = Pamap2Dataset(train_df, feature_cols, label_map, WINDOW_SIZE, STEP)
-        test_dataset = Pamap2Dataset(test_df, feature_cols, label_map, WINDOW_SIZE, STEP)
+        logging.debug(f"[subject{test_subject_id}] convert from pd to np ndarray")
+        X_train_np = train_df[feature_cols].to_numpy()
+        y_train_np = train_df['activity_id'].to_numpy()
+        block_ids_train = train_df['block_id'].to_numpy()
 
-        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        X_test_np = test_df[feature_cols].to_numpy()
+        y_test_np = test_df['activity_id'].to_numpy()
+        block_ids_test = test_df['block_id'].to_numpy()
+        
+        logging.debug(f"[subject{test_subject_id}] create dataset and dataloaders")
+        train_dataset = Pamap2Dataset(X_train_np, y_train_np, block_ids_train, label_map, WINDOW_SIZE, STEP)
+        test_dataset = Pamap2Dataset(X_test_np, y_test_np, block_ids_test, label_map, WINDOW_SIZE, STEP)
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=DATALOADER_WORKERS)
+        test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=DATALOADER_WORKERS)
 
         logging.debug(f"[subject{test_subject_id}] Initialize CNN")
         model = CNNModel(n_features=len(feature_cols), n_classes=n_classes).to(DEVICE)
