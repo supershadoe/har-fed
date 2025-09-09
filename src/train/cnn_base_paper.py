@@ -14,7 +14,7 @@ from models.base_paper_cnn import BasePaperCNN
 from train.dataset import Pamap2Dataset
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='[%(levelname)s] %(asctime)s: %(message)s',
 )
 logger = logging.getLogger(__name__)
