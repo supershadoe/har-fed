@@ -2,12 +2,9 @@ import argparse
 import logging
 import pathlib
 import sys
-from typing import List
 
 import pandas as pd
 from tqdm.auto import tqdm
-
-from annotations import Attributes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,37 +12,57 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
-    """
-    Loads raw PAMAP2 data for each subject, cleans it, and saves each
-    subject's data to a separate CSV file.
-    """
-    attributes = Attributes(is_preprocessing=True)
+ALL_FEATURES = [
+    'timestamp', 'activity_id', 'heart_rate',
+    *(
+        f'{i}_{j}'
+        for i in ('hand', 'chest', 'ankle')
+        for j in (
+            'temp_c', # dropped
+            'acc16_x', 'acc16_y', 'acc16_z', # kept
+            'acc6_x', 'acc6_y', 'acc6_z', # dropped
+            'gyr_x', 'gyr_y', 'gyr_z', # kept
+            'mgt_x', 'mgt_y', 'mgt_z', # dropped
+            'orient_x', 'orient_y', 'orient_z', 'orient_w', # dropped
+        )
+    ),
+]
+FEATURES_TO_DROP = [
+    f'{i}_{j}'
+    for i in ('hand', 'chest', 'ankle')
+    for j in (
+        'temp_c',
+        'acc6_x', 'acc6_y', 'acc6_z',
+        'mgt_x', 'mgt_y', 'mgt_z',
+        'orient_x', 'orient_y', 'orient_z', 'orient_w',
+    )
+]
 
+def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
     for i in tqdm(range(101, 110), desc="Processing Subjects", colour="cyan"):
         file_path = dataset_path / "Protocol" / f"subject{i}.dat"
         optional_file_path = dataset_path / "Optional" / f"subject{i}.dat"
 
-        dfs: List[pd.DataFrame] = [
-            pd.read_csv(file_path, sep=" ", header=None, names=attributes.to_keep)
+        dfs: list[pd.DataFrame] = [
+            pd.read_csv(file_path, sep=" ", header=None, names=ALL_FEATURES)
         ]
         if optional_file_path.exists():
             dfs.append(pd.read_csv(
                 optional_file_path,
                 sep=" ",
                 header=None,
-                names=attributes.to_keep,
+                names=ALL_FEATURES,
             ))
 
         subject_df = pd.concat(dfs, ignore_index=True)
-        subject_df.drop(attributes.to_drop, axis=1, inplace=True)
+        subject_df.drop(FEATURES_TO_DROP, axis=1, inplace=True)
         subject_df = subject_df.ffill()
         subject_df = subject_df[subject_df['activity_id'] != 0].reset_index(drop=True)
         subject_df['subject_id'] = i
         subject_df.dropna(inplace=True)
 
-        output_filename = output_path / f"subject{i}.csv"
-        subject_df.to_csv(output_filename, index=False)
+        output_filename = output_path / f"subject{i}.parquet.zst"
+        subject_df.to_parquet(output_filename, compression='zstd')
 
     logger.info(
         f"Preprocessing complete; Saved processed files at {output_path}.",

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from models.cnn import CNNModel
-from annotations import TargetClass
+from target_class import TargetClass
 from train.dataset import Pamap2Dataset
 
 
@@ -38,7 +38,7 @@ def main():
     """Main function to run the LOSO cross-validation."""
     logger.info(f"Using device: {DEVICE}")
 
-    temp_df = pd.read_csv(f"{PROCESSED_DATA_DIR}/subject101.csv")
+    temp_df = pd.read_parquet(f"{PROCESSED_DATA_DIR}/subject101.parquet.zst")
     feature_cols = [col for col in temp_df.columns if col not in ['timestamp', 'activity_id']]
 
     label_map = {}
@@ -57,11 +57,11 @@ def main():
     for test_subject_id in tqdm(SUBJECTS_TO_USE, desc="LOSO Folds"):
         logging.debug(f"[subject{test_subject_id}] Concating train set")
         train_subject_ids = [sid for sid in SUBJECTS_TO_USE if sid != test_subject_id]
-        train_dfs = [pd.read_csv(f"{PROCESSED_DATA_DIR}/subject{sid}.csv") for sid in train_subject_ids]
+        train_dfs = [pd.read_parquet(f"{PROCESSED_DATA_DIR}/subject{sid}.parquet.zst") for sid in train_subject_ids]
         train_df = pd.concat(train_dfs, ignore_index=True)
 
         logging.debug(f"[subject{test_subject_id}] Creating test set")
-        test_df = pd.read_csv(f"{PROCESSED_DATA_DIR}/subject{test_subject_id}.csv")
+        test_df = pd.read_parquet(f"{PROCESSED_DATA_DIR}/subject{test_subject_id}.parquet.zst")
 
         logging.debug(f"[subject{test_subject_id}] Drop rare acts")
         train_df = train_df[~train_df['activity_id'].isin(RARE_ACTIVITIES)]

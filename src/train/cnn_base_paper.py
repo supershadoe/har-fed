@@ -9,8 +9,9 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from target_class import TargetClass
 from models.base_paper_cnn import BasePaperCNN
-from train.dataset import Pamap2Dataset 
+from train.dataset import Pamap2Dataset
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,17 +20,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-PROCESSED_DATA_DIR = "../dataset"
+DATA_DIR = "../dataset"
 SUBJECTS_TO_USE = list(range(101, 109))
 ACTIVITIES_TO_USE = [
-    1,  # lying
-    2,  # sitting
-    3,  # standing
-    4,  # walking
-    12, # ascending stairs
-    13, # descending stairs
-    16, # vacuum cleaning
-    17, # ironing
+    TargetClass.LYING,
+    TargetClass.SITTING,
+    TargetClass.STANDING,
+    TargetClass.WALKING,
+    TargetClass.ASCENDING,
+    TargetClass.DESCENDING,
+    TargetClass.VACUUM,
+    TargetClass.IRONING,
 ]
 
 # Hyperparameters from the paper
@@ -47,7 +48,9 @@ def main():
     all_train_dfs, all_test_dfs = [], []
     for subject_id in SUBJECTS_TO_USE:
         logging.debug(f"[subject{subject_id}] Creating 80/20 split")
-        df = pd.read_csv(f"{PROCESSED_DATA_DIR}/subject{subject_id}.csv")
+        df = pd.read_parquet(
+            f"{DATA_DIR}/subject{subject_id}.parquet.zst"
+        )
         df = df[df['activity_id'].isin(ACTIVITIES_TO_USE)]
 
         train_subject_df, test_subject_df = train_test_split(
@@ -63,7 +66,6 @@ def main():
 
     feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id']]
     label_map = {label: i for i, label in enumerate(ACTIVITIES_TO_USE)}
-    n_classes = len(ACTIVITIES_TO_USE)
 
     logging.debug(f"Normalize train and test dfs")
     scaler = StandardScaler()
@@ -91,7 +93,7 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=DATALOADER_WORKERS)
 
     logging.debug(f"Initialize model")
-    model = BasePaperCNN(n_features=len(feature_cols), n_classes=n_classes).to(DEVICE)
+    model = BasePaperCNN(n_features=len(feature_cols), n_classes=len(ACTIVITIES_TO_USE)).to(DEVICE)
     optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.CrossEntropyLoss()
     
@@ -120,7 +122,10 @@ def main():
     logger.info(f"Final Centralized Accuracy: {final_accuracy * 100:.2f}%")
     logger.info("--- Detailed Classification Report ---")
 
-    print(classification_report(all_labels, all_preds, target_names=[label_map.get(i, 'Unknown') for i in range(n_classes)]))
+    print(classification_report(
+        all_labels, all_preds,
+        target_names=[act.name for act in ACTIVITIES_TO_USE],
+    ))
 
 if __name__ == '__main__':
     main()
