@@ -1,3 +1,4 @@
+flwr[simulation]
 numpy
 pandas
 pandas-stubs
