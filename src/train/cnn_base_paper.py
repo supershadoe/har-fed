@@ -46,13 +46,14 @@ def main():
     logger.info(f"Using device: {DEVICE}")
 
     all_train_dfs, all_test_dfs = [], []
+    used_acts = [act.value for act in ACTIVITIES_TO_USE]
     for subject_id in SUBJECTS_TO_USE:
         logging.debug(f"[subject{subject_id}] Creating 80/20 split")
         df = pd.read_parquet(
             f"{DATA_DIR}/subject{subject_id}.parquet.zst"
         )
         df = df[
-            df['activity_id'].isin([act.value for act in ACTIVITIES_TO_USE])
+            df['activity_id'].isin(used_acts)
         ]
 
         train_subject_df, test_subject_df = train_test_split(
@@ -67,7 +68,7 @@ def main():
     logger.info(f"Total training samples: {len(train_df)}, Test samples: {len(test_df)}")
 
     feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id']]
-    label_map = {label: i for i, label in enumerate(ACTIVITIES_TO_USE)}
+    label_map = {label: i for i, label in enumerate(used_acts)}
 
     logging.debug(f"Normalize train and test dfs")
     scaler = StandardScaler()
