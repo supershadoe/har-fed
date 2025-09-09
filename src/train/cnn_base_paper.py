@@ -51,7 +51,9 @@ def main():
         df = pd.read_parquet(
             f"{DATA_DIR}/subject{subject_id}.parquet.zst"
         )
-        df = df[df['activity_id'].isin(ACTIVITIES_TO_USE)]
+        df = df[
+            df['activity_id'].isin([act.value for act in ACTIVITIES_TO_USE])
+        ]
 
         train_subject_df, test_subject_df = train_test_split(
             df, test_size=0.20, shuffle=False
