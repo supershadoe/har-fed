@@ -67,7 +67,7 @@ def main():
     test_df = pd.concat(all_test_dfs, ignore_index=True)
     logger.info(f"Total training samples: {len(train_df)}, Test samples: {len(test_df)}")
 
-    feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id']]
+    feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id', 'heart_rate']]
     logger.debug(
         f"{len(feature_cols)} Features used: {', '.join(feature_cols)}",
     )
