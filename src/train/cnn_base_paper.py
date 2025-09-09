@@ -68,6 +68,9 @@ def main():
     logger.info(f"Total training samples: {len(train_df)}, Test samples: {len(test_df)}")
 
     feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id']]
+    logger.debug(
+        f"{len(feature_cols)} Features used: {', '.join(feature_cols)}",
+    )
     label_map = {label: i for i, label in enumerate(used_acts)}
 
     logging.debug(f"Normalize train and test dfs")
@@ -97,7 +100,9 @@ def main():
 
     logging.debug(f"Initialize model")
     model = BasePaperCNN(n_features=len(feature_cols), n_classes=len(ACTIVITIES_TO_USE)).to(DEVICE)
-    optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=LEARNING_RATE, momentum=0.9,
+    )
     criterion = nn.CrossEntropyLoss()
     
     logger.info("Starting model training...")
@@ -127,6 +132,7 @@ def main():
 
     print(classification_report(
         all_labels, all_preds,
+        labels=list(range(len(ACTIVITIES_TO_USE))),
         target_names=[act.name for act in ACTIVITIES_TO_USE],
     ))
 
