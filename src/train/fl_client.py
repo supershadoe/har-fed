@@ -136,7 +136,7 @@ class FlClient(NumPyClient):
 
 def client_fn(context: Context) -> Client:
     used_acts = [act.value for act in ACTIVITIES_TO_USE]
-    subject_id = context.node_config["partition-id"]
+    subject_id = 101 + int(context.node_config["partition-id"])
     logging.debug(f"[subject{subject_id}] Creating 80/20 split")
     df = pd.read_parquet(
         f"{DATA_DIR}/subject{subject_id}.parquet.zst"
