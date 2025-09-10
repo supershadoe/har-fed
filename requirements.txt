@@ -1,4 +1,5 @@
 flwr[simulation]
+ray # flwr[simulation] doesn't install this for whatever reason
 numpy
 pandas
 pandas-stubs
