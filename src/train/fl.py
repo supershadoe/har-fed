@@ -14,6 +14,7 @@ logging.basicConfig(
     format='[%(levelname)s] %(asctime)s: %(message)s',
 )
 logger = logging.getLogger(__name__)
+logging.getLogger("flwr").setLevel(logging.WARNING)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

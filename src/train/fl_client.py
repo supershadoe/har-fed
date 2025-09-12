@@ -23,6 +23,7 @@ logging.basicConfig(
     format='[%(levelname)s] %(asctime)s: %(message)s',
 )
 logger = logging.getLogger(__name__)
+logging.getLogger("flwr").setLevel(logging.WARNING)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DATA_DIR = "../dataset"
@@ -91,11 +92,12 @@ def test(model, test_loader, device: str):
     loss = 0
     with torch.no_grad():
         for X_batch, y_batch in tqdm(test_loader, desc="Evaluating"):
-            outputs = model(X_batch.to(device))
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+            outputs = model(X_batch)
             loss += criterion(outputs, y_batch).item()
             _, preds = torch.max(outputs, 1)
             all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(y_batch.numpy())
+            all_labels.extend(y_batch.cpu().numpy())
 
     accuracy = accuracy_score(all_labels, all_preds)
     logger.info(f"Final Centralized Accuracy: {accuracy * 100:.2f}%")
