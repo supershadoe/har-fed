@@ -16,9 +16,9 @@ def server_fn(context: Context) -> ServerAppComponents:
     strategy = FedAvg(
         fraction_fit=1.0,  # Sample 100% of available clients for training
         fraction_evaluate=0.5,  # Sample 50% of available clients for evaluation
-        min_fit_clients=10,  # Never sample less than 10 clients for training
-        min_evaluate_clients=5,  # Never sample less than 5 clients for evaluation
-        min_available_clients=10,  # Wait until all 10 clients are available
+        min_fit_clients=8,  # Never sample less than 8 clients for training
+        min_evaluate_clients=4,  # Never sample less than 4 clients for evaluation
+        min_available_clients=8,  # Wait until all 8 clients are available
     )
 
     return ServerAppComponents(strategy=strategy, config=config)

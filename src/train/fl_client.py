@@ -44,7 +44,7 @@ BATCH_SIZE = 64   # Paper, Section III C-3: "batch size of 64"
 EPOCHS = 100      # Paper, Section VI-A: "trained up to 100 epochs"
 LEARNING_RATE = 0.01 # Paper, Section III C-3: "learning rate n of of 0.01"
 
-DATALOADER_WORKERS = 8
+#DATALOADER_WORKERS = 8
 
 
 def get_parameters(model: nn.Module):
@@ -178,8 +178,8 @@ def client_fn(context: Context) -> Client:
     train_dataset = Pamap2Dataset(X_train_np, y_train_np, block_ids_train, label_map, WINDOW_SIZE, STEP)
     test_dataset = Pamap2Dataset(X_test_np, y_test_np, block_ids_test, label_map, WINDOW_SIZE, STEP)
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=DATALOADER_WORKERS)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=DATALOADER_WORKERS)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
     model = BasePaperCNN(n_features=len(feature_cols), n_classes=len(ACTIVITIES_TO_USE)).to(DEVICE)
 
     return FlClient(
