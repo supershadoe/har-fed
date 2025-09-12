@@ -11,7 +11,7 @@ def server_fn(context: Context) -> ServerAppComponents:
     wrapped in the returned ServerAppComponents object.
     """
 
-    config = ServerConfig(num_rounds=5)
+    config = ServerConfig(num_rounds=70)
 
     strategy = FedAvg(
         fraction_fit=1.0,  # Sample 100% of available clients for training
