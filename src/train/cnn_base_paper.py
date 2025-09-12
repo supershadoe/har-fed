@@ -9,15 +9,11 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from logs import LOGGER
 from target_class import TargetClass
 from models.base_paper_cnn import BasePaperCNN
 from train.dataset import Pamap2Dataset
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(levelname)s] %(asctime)s: %(message)s',
-)
-logger = logging.getLogger(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DATA_DIR = "../dataset"
@@ -43,7 +39,7 @@ LEARNING_RATE = 0.01 # Paper, Section III C-3: "learning rate n of of 0.01"
 DATALOADER_WORKERS = 64
 
 def main():
-    logger.info(f"Using device: {DEVICE}")
+    LOGGER.info(f"Using device: {DEVICE}")
 
     all_train_dfs, all_test_dfs = [], []
     used_acts = [act.value for act in ACTIVITIES_TO_USE]
@@ -65,10 +61,10 @@ def main():
     logging.debug(f"Merge all train and test dfs")
     train_df = pd.concat(all_train_dfs, ignore_index=True)
     test_df = pd.concat(all_test_dfs, ignore_index=True)
-    logger.info(f"Total training samples: {len(train_df)}, Test samples: {len(test_df)}")
+    LOGGER.info(f"Total training samples: {len(train_df)}, Test samples: {len(test_df)}")
 
     feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id']]
-    logger.debug(
+    LOGGER.debug(
         f"{len(feature_cols)} Features used: {', '.join(feature_cols)}",
     )
     label_map = {label: i for i, label in enumerate(used_acts)}
@@ -105,7 +101,7 @@ def main():
     )
     criterion = nn.CrossEntropyLoss()
     
-    logger.info("Starting model training...")
+    LOGGER.info("Starting model training...")
     for epoch in range(EPOCHS):
         model.train()
         for X_batch, y_batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS}", leave=False):
@@ -116,7 +112,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-    logger.info("Evaluating final model...")
+    LOGGER.info("Evaluating final model...")
     model.eval()
     all_preds, all_labels = [], []
     with torch.no_grad():
@@ -127,8 +123,8 @@ def main():
             all_labels.extend(y_batch.numpy())
 
     final_accuracy = accuracy_score(all_labels, all_preds)
-    logger.info(f"Final Centralized Accuracy: {final_accuracy * 100:.2f}%")
-    logger.info("--- Detailed Classification Report ---")
+    LOGGER.info(f"Final Centralized Accuracy: {final_accuracy * 100:.2f}%")
+    LOGGER.info("--- Detailed Classification Report ---")
 
     print(classification_report(
         all_labels, all_preds,

@@ -9,16 +9,11 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from logs import LOGGER
 from models.cnn import CNNModel
 from target_class import TargetClass
 from train.dataset import Pamap2Dataset
 
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(levelname)s] %(asctime)s: %(message)s',
-)
-logger = logging.getLogger(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 PROCESSED_DATA_DIR = "../dataset"
@@ -36,7 +31,7 @@ DATALOADER_WORKERS = 64
 
 def main():
     """Main function to run the LOSO cross-validation."""
-    logger.info(f"Using device: {DEVICE}")
+    LOGGER.info(f"Using device: {DEVICE}")
 
     temp_df = pd.read_parquet(f"{PROCESSED_DATA_DIR}/subject101.parquet.zst")
     feature_cols = [col for col in temp_df.columns if col not in ['timestamp', 'activity_id']]
@@ -52,7 +47,7 @@ def main():
 
     final_scores = []
 
-    logger.info("Starting...")
+    LOGGER.info("Starting...")
 
     for test_subject_id in tqdm(SUBJECTS_TO_USE, desc="LOSO Folds"):
         logging.debug(f"[subject{test_subject_id}] Concating train set")
@@ -118,12 +113,12 @@ def main():
 
         score = f1_score(all_labels, all_preds, average='weighted')
         final_scores.append(score)
-        logger.info(f"FOLD SCORE for Subject {test_subject_id} (Weighted F1): {score:.4f}")
+        LOGGER.info(f"FOLD SCORE for Subject {test_subject_id} (Weighted F1): {score:.4f}")
 
-    logger.info("Cross-Validation Complete.")
-    logger.info(f"Scores from all folds: {[f'{s:.4f}' for s in final_scores]}")
-    logger.info(f"Average Weighted F1 Score: {np.mean(final_scores):.4f}")
-    logger.info(f"Standard Deviation: {np.std(final_scores):.4f}")
+    LOGGER.info("Cross-Validation Complete.")
+    LOGGER.info(f"Scores from all folds: {[f'{s:.4f}' for s in final_scores]}")
+    LOGGER.info(f"Average Weighted F1 Score: {np.mean(final_scores):.4f}")
+    LOGGER.info(f"Standard Deviation: {np.std(final_scores):.4f}")
 
 
 if __name__ == '__main__':

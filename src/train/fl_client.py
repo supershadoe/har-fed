@@ -13,17 +13,11 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
+from logs import LOGGER
 from models.base_paper_cnn import BasePaperCNN
 from train.dataset import Pamap2Dataset
 from target_class import TargetClass
 
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(levelname)s] %(asctime)s: %(message)s',
-)
-logger = logging.getLogger(__name__)
-logging.getLogger("flwr").setLevel(logging.WARNING)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DATA_DIR = "../dataset"
@@ -63,7 +57,7 @@ def set_parameters(model: nn.Module, parameters: list[np.ndarray]):
 
 
 def train_one_epoch(model, train_loader, epochs: int, device: str):
-    logger.info("Starting model training...")
+    LOGGER.info("Starting model training...")
     optimizer = torch.optim.SGD(
         model.parameters(), lr=0.01, momentum=0.9,
     )
@@ -83,7 +77,7 @@ def train_one_epoch(model, train_loader, epochs: int, device: str):
             correct += (torch.max(outputs.data, 1)[1] == y_batch).sum().item()
         epoch_loss /= len(train_loader.dataset)
         epoch_acc = correct / total
-        logger.debug(f"Epoch {epoch+1}: train loss {epoch_loss}, accuracy {epoch_acc}")
+        LOGGER.debug(f"Epoch {epoch+1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
 def test(model, test_loader, device: str):
     criterion = nn.CrossEntropyLoss()
@@ -100,9 +94,9 @@ def test(model, test_loader, device: str):
             all_labels.extend(y_batch.cpu().numpy())
 
     accuracy = accuracy_score(all_labels, all_preds)
-    logger.info(f"Final Centralized Accuracy: {accuracy * 100:.2f}%")
-    logger.debug("--- Detailed Classification Report ---")
-    logger.debug(classification_report(
+    LOGGER.info(f"Final Centralized Accuracy: {accuracy * 100:.2f}%")
+    LOGGER.debug("--- Detailed Classification Report ---")
+    LOGGER.debug(classification_report(
         all_labels, all_preds,
         labels=list(range(len(ACTIVITIES_TO_USE))),
         target_names=[act.name for act in ACTIVITIES_TO_USE],
@@ -120,11 +114,11 @@ class FlClient(NumPyClient):
         self.device = device
 
     def get_parameters(self, config):
-        logger.debug(f"[Client {self.subject_id}] get_parameters")
+        LOGGER.debug(f"[Client {self.subject_id}] get_parameters")
         return get_parameters(self.model)
 
     def fit(self, parameters, config):
-        logger.debug(f"[Client {self.subject_id}] fit, config: {config}")
+        LOGGER.debug(f"[Client {self.subject_id}] fit, config: {config}")
         set_parameters(self.model, parameters)
         train_one_epoch(self.model, self.train_loader, epochs=1, device=self.device)
         return get_parameters(self.model), len(self.train_loader), {}
@@ -150,10 +144,10 @@ def client_fn(context: Context) -> Client:
     train_df, test_df = train_test_split(
         df, test_size=0.20, shuffle=False
     )
-    logger.info(f"[subject{subject_id}] Training samples: {len(train_df)}, Test samples: {len(test_df)}")
+    LOGGER.info(f"[subject{subject_id}] Training samples: {len(train_df)}, Test samples: {len(test_df)}")
 
     feature_cols = [col for col in train_df.columns if col not in ['timestamp', 'activity_id', 'subject_id']]
-    logger.debug(
+    LOGGER.debug(
         f"{len(feature_cols)} Features used: {', '.join(feature_cols)}",
     )
     label_map = {label: i for i, label in enumerate(used_acts)}

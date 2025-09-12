@@ -1,5 +1,3 @@
-import logging
-
 import torch
 from flwr.client import ClientApp
 from flwr.server import ServerApp
@@ -8,13 +6,6 @@ from flwr.simulation import run_simulation
 from train.fl_client import client_fn
 from train.fl_server import server_fn
 
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(levelname)s] %(asctime)s: %(message)s',
-)
-logger = logging.getLogger(__name__)
-logging.getLogger("flwr").setLevel(logging.WARNING)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

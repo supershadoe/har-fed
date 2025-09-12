@@ -1,16 +1,10 @@
 import argparse
-import logging
 import pathlib
 import sys
 
 import pandas as pd
 from tqdm.auto import tqdm
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(levelname)s] %(asctime)s: %(message)s',
-)
-logger = logging.getLogger(__name__)
+from logs import LOGGER
 
 ALL_FEATURES = [
     'timestamp', 'activity_id', 'heart_rate',
@@ -64,7 +58,7 @@ def preprocess_pamap2(dataset_path: pathlib.Path, output_path: pathlib.Path):
         output_filename = output_path / f"subject{i}.parquet.zst"
         subject_df.to_parquet(output_filename, compression='zstd')
 
-    logger.info(
+    LOGGER.info(
         f"Preprocessing complete; Saved processed files at {output_path}.",
     )
 
@@ -92,7 +86,7 @@ if __name__ == '__main__':
     output_path.mkdir(parents=True, exist_ok=True)
 
     if not dataset_path.exists():
-        logger.fatal('Dataset not found; Run download_dataset.sh first!')
+        LOGGER.fatal('Dataset not found; Run download_dataset.sh first!')
         sys.exit(127)
 
     preprocess_pamap2(dataset_path, output_path)
