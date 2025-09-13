@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from logs import LOGGER
-from models.base_paper_cnn import BasePaperCNN
+from models.lstm import HarLstmModel
 from train.dataset import Pamap2Dataset
 from target_class import TargetClass
 
@@ -176,7 +176,7 @@ def client_fn(context: Context) -> Client:
 
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    model = BasePaperCNN(n_features=len(feature_cols), n_classes=len(ACTIVITIES_TO_USE)).to(DEVICE)
+    model = HarLstmModel(n_features=len(feature_cols), n_classes=len(ACTIVITIES_TO_USE)).to(DEVICE)
 
     return FlClient(
         subject_id, model, train_loader, test_loader, DEVICE
