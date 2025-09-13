@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from logs import LOGGER
-from models.cnn import CNNModel
+from models.lstm import HarLstmModel
 from target_class import TargetClass
 from train.dataset import Pamap2Dataset
 
@@ -87,7 +87,7 @@ def main():
         test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=DATALOADER_WORKERS)
 
         logging.debug(f"[subject{test_subject_id}] Initialize CNN")
-        model = CNNModel(n_features=len(feature_cols), n_classes=n_classes).to(DEVICE)
+        model = HarLstmModel(n_features=len(feature_cols), n_classes=n_classes).to(DEVICE)
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
         criterion = nn.CrossEntropyLoss()
 
